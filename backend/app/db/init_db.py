@@ -3,7 +3,10 @@
 from app.config import settings
 from app.database import Base, engine
 # Import all models to register them on Base.metadata
+from app.models.acknowledgement import Acknowledgement  # noqa: F401
 from app.models.event import Event  # noqa: F401
+from app.models.source_connection import SourceConnection  # noqa: F401
+from app.models.user_preferences import UserPreference  # noqa: F401
 
 
 def init_db() -> None:
