@@ -71,3 +71,12 @@ def event_repo(db_session: Session) -> EventRepository:
 def ingestion_service(event_repo: EventRepository) -> EventIngestionService:
     """Provide an EventIngestionService bound to the test repository."""
     return EventIngestionService(event_repo)
+
+
+@pytest.fixture
+def client(db_session: Session):
+    """Provide a TestClient with database session overridden by test memory DB."""
+    from fastapi.testclient import TestClient
+    with TestClient(app) as test_client:
+        yield test_client
+

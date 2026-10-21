@@ -143,3 +143,11 @@ class EventListResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class EventIngestionResponse(BaseModel):
+    """Schema for event ingestion response indicating persistence outcome."""
+
+    event: EventResponse
+    is_duplicate: bool
+

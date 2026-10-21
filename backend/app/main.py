@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.router import api_router
 from app.config import settings
 
 app = FastAPI(
@@ -21,10 +22,4 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-@app.get("/api/v1/health", tags=["Health"])
-def health():
-    return {
-        "status": "ok",
-        "service": "accessable-api",
-    }
+app.include_router(api_router, prefix=settings.api_prefix)
