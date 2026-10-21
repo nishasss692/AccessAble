@@ -1,0 +1,10 @@
+{
+  "event_id": "demo-event-001",
+  "type": "motion",
+  "timestamp": "2026-10-21T12:30:00Z",
+  "device_id": "demo-device-01",
+  "metadata": {
+    "is_simulated": true,
+    "location_label": "Front entrance"
+  }
+}
