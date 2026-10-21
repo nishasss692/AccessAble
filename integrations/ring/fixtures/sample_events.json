@@ -1,4 +1,5 @@
 {
+  "_notice": "DEMO DATA ONLY - this is a simulated example, not a real Ring event.",
   "event_id": "demo-event-001",
   "type": "motion",
   "timestamp": "2026-10-21T12:30:00Z",

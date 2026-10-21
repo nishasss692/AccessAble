@@ -1,5 +1,5 @@
 import pytest
-from app.normalizer import normalize_event
+from integrations.ring.app.normalizer import normalize_event
 def test_normalizes_demo_event():
     raw = {
         "event_id": "demo-001",
@@ -17,16 +17,14 @@ def test_normalizes_demo_event():
 def test_missing_event_type_is_rejected():
     with pytest.raises(ValueError, match="event type"):
         normalize_event({"event_id": "demo-001"})
-def test_missing_timestamp_is_allowed():
-    result = normalize_event({
-        "event_id": "demo-002",
-        "type": "motion",
-    })
-    assert result["occurred_at"] is None
+def test_missing_timestamp_is_rejected():
+    with pytest.raises(ValueError, match="required"):
+        normalize_event({"event_id": "demo-002", "type": "motion"})
 def test_invalid_metadata_is_rejected():
     with pytest.raises(ValueError, match="Metadata"):
         normalize_event({
             "type": "motion",
+            "timestamp": "2026-10-21T12:30:00Z",
             "metadata": ["not", "an", "object"],
         })
 def test_timezone_is_required():
@@ -34,4 +32,12 @@ def test_timezone_is_required():
         normalize_event({
             "type": "motion",
             "timestamp": "2026-10-21T12:30:00",
+        })
+
+def test_sensitive_metadata_key_is_rejected():
+    with pytest.raises(ValueError, match="forbidden sensitive key"):
+        normalize_event({
+            "type": "motion",
+            "timestamp": "2026-10-21T12:30:00Z",
+            "metadata": {"access_token": "must-not-be-stored"},
         })

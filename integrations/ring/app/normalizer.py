@@ -1,42 +1,55 @@
 from datetime import datetime, timezone
 from typing import Any
 
+FORBIDDEN_METADATA_KEYS = {
+    "token",
+    "secret",
+    "password",
+    "auth_token",
+    "access_token",
+    "refresh_token",
+    "api_key",
+    "client_secret",
+    "authorization",
+}
+
+
 def normalize_event(raw: dict[str, Any], source: str = "demo") -> dict:
     if source not in {"ring", "demo"}:
         raise ValueError("ring/demo rehna hai")
 
     event_type = raw.get("event_type") or raw.get("type")
     if not isinstance(event_type, str) or not event_type.strip():
-        raise ValueError("invalid")
+        raise ValueError("Invalid event type")
 
     external_id = raw.get("external_event_id") or raw.get("event_id")
 
     occurred_at = raw.get("occurred_at") or raw.get("timestamp")
 
-    if occurred_at is not None:
-        if not isinstance(occurred_at, str):
-            raise ValueError("must be string or nlul")
+    if not isinstance(occurred_at, str) or not occurred_at.strip():
+        raise ValueError("Event timestamp is required")
 
-        try:
-            parsed = datetime.fromisoformat(
-                occurred_at.replace("Z", "+00:00")
-            )
-        except ValueError as exc:
-            raise ValueError("Invalid event timestamp") from exc
+    try:
+        parsed = datetime.fromisoformat(occurred_at.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError("Invalid event timestamp") from exc
 
-        # A timestamp without timezone information is ambiguous.
-        if parsed.tzinfo is None:
-            raise ValueError("Event timestamp must include a timezone")
+    # A timestamp without timezone information is ambiguous.
+    if parsed.tzinfo is None:
+        raise ValueError("Event timestamp must include a timezone")
 
-        occurred_at = (
-            parsed.astimezone(timezone.utc)
-            .isoformat(timespec="seconds")
-            .replace("+00:00", "Z")
-        )
+    occurred_at = (
+        parsed.astimezone(timezone.utc)
+        .isoformat(timespec="seconds")
+        .replace("+00:00", "Z")
+    )
 
     metadata = raw.get("metadata") or {}
     if not isinstance(metadata, dict):
         raise ValueError("Metadata must be a JSON object")
+    for key in metadata:
+        if str(key).lower().strip() in FORBIDDEN_METADATA_KEYS:
+            raise ValueError(f"Metadata contains forbidden sensitive key '{key}'")
 
     device_id = raw.get("device_id")
 
