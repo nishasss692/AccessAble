@@ -8,9 +8,17 @@ from sqlalchemy.pool import StaticPool
 
 from app.database import Base, get_db
 from app.main import app
+from app.models.acknowledgement import Acknowledgement  # noqa: F401
 from app.models.event import Event  # noqa: F401
+from app.models.source_connection import SourceConnection  # noqa: F401
+from app.models.user_preferences import UserPreference  # noqa: F401
+from app.repositories.acknowledgement_repository import AcknowledgementRepository
+from app.repositories.connection_repository import ConnectionRepository
 from app.repositories.event_repository import EventRepository
+from app.repositories.preferences_repository import PreferencesRepository
+from app.services.acknowledgement_service import AcknowledgementService
 from app.services.event_ingestion_service import EventIngestionService
+from app.services.preference_service import PreferenceService
 
 # Isolated SQLite in-memory database shared only within the test thread
 TEST_DATABASE_URL = "sqlite:///:memory:"
@@ -74,9 +82,44 @@ def ingestion_service(event_repo: EventRepository) -> EventIngestionService:
 
 
 @pytest.fixture
+def preferences_repo(db_session: Session) -> PreferencesRepository:
+    """Provide a PreferencesRepository bound to the test session."""
+    return PreferencesRepository(db_session)
+
+
+@pytest.fixture
+def preference_service(preferences_repo: PreferencesRepository) -> PreferenceService:
+    """Provide a PreferenceService bound to the test repository."""
+    return PreferenceService(preferences_repo)
+
+
+@pytest.fixture
+def acknowledgement_repo(db_session: Session) -> AcknowledgementRepository:
+    """Provide an AcknowledgementRepository bound to the test session."""
+    return AcknowledgementRepository(db_session)
+
+
+@pytest.fixture
+def acknowledgement_service(
+    acknowledgement_repo: AcknowledgementRepository,
+    event_repo: EventRepository,
+) -> AcknowledgementService:
+    """Provide an AcknowledgementService bound to test repositories."""
+    return AcknowledgementService(
+        acknowledgement_repo=acknowledgement_repo,
+        event_repo=event_repo,
+    )
+
+
+@pytest.fixture
+def connection_repo(db_session: Session) -> ConnectionRepository:
+    """Provide a ConnectionRepository bound to the test session."""
+    return ConnectionRepository(db_session)
+
+
+@pytest.fixture
 def client(db_session: Session):
     """Provide a TestClient with database session overridden by test memory DB."""
     from fastapi.testclient import TestClient
     with TestClient(app) as test_client:
         yield test_client
-
