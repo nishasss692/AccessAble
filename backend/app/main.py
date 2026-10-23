@@ -24,6 +24,7 @@ if "*" in cors_origins_list and effective_allow_credentials:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins_list,
+    allow_origin_regex=r"^https://.*\.vercel\.app$",
     allow_credentials=effective_allow_credentials,
     allow_methods=["GET", "POST", "PUT", "OPTIONS", "HEAD"],
     allow_headers=["*"],
