@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     app_name: str = "AccessAble API"
     api_prefix: str = "/api/v1"
     database_url: str = "sqlite:///./accessable.db"
-    cors_origins: str = "http://localhost:5173"
+    cors_origins: str = "http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174,http://localhost:3000"
     cors_allow_credentials: bool = False
     ring_client_id: str = ""
     ring_client_secret: str = ""
