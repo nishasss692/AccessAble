@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-primary: #030712;
+    --bg-card: rgba(15, 23, 42, 0.75);
+    --border-color: rgba(51, 65, 85, 0.8);
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --accent-cyan: #00f0ff;
+    --accent-amber: #f59e0b;
+    --focus-ring: #00f0ff;
+  }
+
+  /* Text Scaling Modes */
+  html[data-text-scale="small"] {
+    font-size: 14px;
+  }
+  html[data-text-scale="medium"] {
+    font-size: 16px;
+  }
+  html[data-text-scale="large"] {
+    font-size: 19px;
+  }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    overflow-x: hidden;
+  }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* High Contrast Accessible Mode */
+  body.high-contrast {
+    --bg-primary: #000000 !important;
+    --bg-card: #000000 !important;
+    --border-color: #ffff00 !important;
+    --text-primary: #ffffff !important;
+    --text-secondary: #ffff00 !important;
+    --focus-ring: #ffff00 !important;
+    background-color: #000000 !important;
+    color: #ffffff !important;
+  }
+
+  body.high-contrast * {
+    border-color: #ffff00 !important;
+  }
+
+  body.high-contrast button,
+  body.high-contrast a,
+  body.high-contrast input,
+  body.high-contrast select {
+    border: 2px solid #ffffff !important;
+    font-weight: 700 !important;
+  }
+
+  body.high-contrast .bg-slate-900\/70,
+  body.high-contrast .bg-slate-900\/80,
+  body.high-contrast .bg-slate-950 {
+    background-color: #000000 !important;
+  }
+
+  body.high-contrast .text-slate-400,
+  body.high-contrast .text-slate-500 {
+    color: #ffff00 !important;
+  }
+}
+
+/* Subtle futuristic background scanline pattern */
+.futuristic-grid {
+  background-size: 40px 40px;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+/* Accessible focus ring for keyboard navigation */
+:focus-visible {
+  outline: 3px solid var(--focus-ring) !important;
+  outline-offset: 3px !important;
+}

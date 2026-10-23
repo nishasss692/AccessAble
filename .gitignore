@@ -33,3 +33,13 @@ htmlcov/
 *~
 .DS_Store
 Thumbs.db
+
+
+# Frontend dependencies and build output
+frontend/node_modules/
+frontend/dist/
+frontend/tsconfig.tsbuildinfo
+
+# Environment variable templates should remain tracked
+.env.*
+!.env.example
