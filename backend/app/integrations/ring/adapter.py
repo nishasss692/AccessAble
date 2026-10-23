@@ -4,6 +4,7 @@ from typing import Any, Optional
 
 from app.models.source_connection import SourceConnection, utc_now
 from app.repositories.connection_repository import ConnectionRepository
+from app.config import settings
 
 
 class RingAdapter:
@@ -41,8 +42,14 @@ class RingAdapter:
             "status": "unknown",
             "is_connected": False,
             "details": {
-                "mode": "unconfigured",
-                "note": "Live Ring credentials not configured. Integration mechanism pending hardware verification by Rishi.",
+                "mode": "webhook",
+                "environment": settings.ring_environment,
+                "client_id_configured": bool(settings.ring_client_id),
+                "client_secret_configured": bool(settings.ring_client_secret),
+                "webhook_signature_configured": bool(settings.ring_hmac_signing_key),
+                "webhook_receiver_enabled": bool(settings.ring_hmac_signing_key),
+                "account_linking_configured": False,
+                "account_link_verified": False,
                 "demo_events_supported": True,
             },
             "error_message": None,
@@ -52,14 +59,16 @@ class RingAdapter:
         """Fetch current connection status record or probe and persist the initial status."""
         record = repo.get_by_source("ring")
 
-        if record is None or self.forced_status is not None:
-            probed = self.probe_status()
-            record = repo.upsert_connection_status(
-                source="ring",
-                status=probed["status"],
-                is_connected=probed["is_connected"],
-                last_checked_at=utc_now(),
-                error_message=probed.get("error_message"),
-                details=probed.get("details", {}),
-            )
+        probed = self.probe_status()
+        record = repo.upsert_connection_status(
+            source="ring",
+            status=probed["status"],
+            is_connected=probed["is_connected"],
+            last_checked_at=utc_now(),
+            last_successful_sync_at=(
+                record.last_successful_sync_at if record is not None else None
+            ),
+            error_message=probed.get("error_message"),
+            details=probed.get("details", {}),
+        )
         return record

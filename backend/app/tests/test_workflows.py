@@ -169,7 +169,9 @@ class TestWorkflowCRingIntegrationStatus:
         assert data["status"] == "unknown"
         assert data["is_connected"] is False
         assert data["error_message"] is None
-        assert data["details"]["mode"] == "unconfigured"
+        assert data["details"]["mode"] == "webhook"
+        assert isinstance(data["details"]["webhook_receiver_enabled"], bool)
+        assert data["details"]["account_link_verified"] is False
 
         # 4. Confirm credentials and secrets never appear in API responses
         data_str = str(data).lower()

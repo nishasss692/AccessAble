@@ -101,8 +101,117 @@ curl.exe http://127.0.0.1:8000/api/v1/integrations/ring/status
 
 ## 6. Live Ring Integration Onboarding
 
-When authorized Ring API credentials or developer tokens become available from hardware testing:
-1. Set Ring credentials in `.env` (never commit `.env` to Git).
-2. Wire credentials into the client adapter in `integrations/ring/app/ring_client.py`.
-3. Update connection state via `RingAdapter` to transition from `unknown` to `connected`.
-4. Verify event deduplication using the camera's native `event_id`.
+### Current webhook implementation
+
+The backend accepts Ring v1.1 webhooks at:
+
+```text
+POST /api/v1/integrations/ring/webhook
+```
+
+It verifies `X-Signature: sha256=<hex>` against the original request bytes using
+HMAC-SHA256, parses the body only after verification, and persists supported
+events through the existing event-ingestion service. `meta.request_id` is the
+external event ID, so the existing database uniqueness constraint makes duplicate
+deliveries safe, including concurrent inserts. Persistence errors return HTTP
+503 so Ring can retry. Unsupported event types return HTTP 200 with an `ignored`
+status and do not create user-visible events. Invalid signatures return HTTP
+401; malformed signed payloads return HTTP 400.
+
+Supported mappings are `motion_detected` → `motion`, `button_press` →
+`doorbell_press`, and the four device lifecycle types → their matching AccessAble
+types. Metadata retains the Ring event ID/type, delivery request ID, and selected
+non-sensitive documented attributes. Account IDs and token-like attributes are
+not copied into event metadata. Event timestamps accept ISO 8601 and Unix
+seconds/milliseconds; malformed or absent event timestamps fall back to Ring's
+`meta.time`, then to receipt time.
+
+### Local configuration
+
+Copy the root `.env.example` to `backend/.env` and set values there (or use the
+deployment platform's secret store). The repository ignores `.env` files.
+Required for webhook verification:
+
+```text
+RING_HMAC_SIGNING_KEY=<Ring-issued HMAC key>
+RING_ENVIRONMENT=staging
+```
+
+The client ID and client secret can be set server-side as `RING_CLIENT_ID` and
+`RING_CLIENT_SECRET`; they do not enable account linking by themselves. Keep the
+API base URL at `https://api.amazonvision.com`. Staging and production need
+separate portal settings and separate deployment secrets. Do not put credentials
+in frontend variables, fixtures, source files, or command output.
+
+`GET /api/v1/integrations/ring/status` reports configuration booleans, the
+environment, receiver readiness, and the last successfully persisted Ring event.
+It remains `unknown` and `is_connected: false` until account linking is actually
+implemented and verified; configured keys or received test webhooks do not mean
+an account is linked.
+
+### Synthetic webhook test
+
+Run backend and tests from `backend/` with the configured Python environment:
+
+```powershell
+pytest app/tests/test_ring_webhook.py app/tests/test_ring_adapter.py
+```
+
+The tests use a synthetic key and payload and need no Ring account or hardware.
+To manually post a synthetic signed payload to a running local API, use a test
+key only (never the portal key):
+
+```powershell
+$env:RING_HMAC_SIGNING_KEY = "synthetic-test-key"
+$body = '{"meta":{"version":"1.1","time":"2026-10-21T12:30:00Z","request_id":"local-test-1","account_id":"synthetic-account"},"data":{"id":"synthetic-device_motion_detected_1","type":"motion_detected","attributes":{"source":"synthetic-device","source_type":"devices","timestamp":1792585800000}}}'
+$hmac = [System.Security.Cryptography.HMACSHA256]::new([Text.Encoding]::UTF8.GetBytes($env:RING_HMAC_SIGNING_KEY))
+$digest = [Convert]::ToHexString($hmac.ComputeHash([Text.Encoding]::UTF8.GetBytes($body))).ToLowerInvariant()
+curl.exe -X POST http://127.0.0.1:8000/api/v1/integrations/ring/webhook `
+  -H "Content-Type: application/json" `
+  -H "X-Signature: sha256=$digest" `
+  --data-raw $body
+```
+
+Repeat the same request to confirm `is_duplicate: true`; then inspect
+`GET /api/v1/events?source=ring`. Clear the synthetic key from the shell after
+testing. This local test does not prove that Ring can reach the app.
+
+### Ring Developer Portal and public delivery
+
+The receiver must be deployed to a publicly reachable HTTPS host (TLS 1.2+),
+and return within Ring's five-second deadline. This repository has deployment
+Dockerfiles and generic deployment notes, but no configured public application
+domain or active deployment. Do not register a guessed host. Once the real
+public base URL is known, configure the staging tab's **Webhook URL** to exactly:
+
+```text
+https://<public-base-host>/api/v1/integrations/ring/webhook
+```
+
+Use the same path on the production tab only after production deployment and
+approval. Configure the HMAC key for each environment in that environment's
+secret store. Check `GET https://<public-base-host>/api/v1/health`, then send a
+synthetic signed POST to the public webhook URL and inspect the event list and
+status endpoint before enabling Ring delivery. The health endpoint alone does
+not verify webhook signatures or database persistence.
+
+### Account-linking and real-event prerequisites
+
+Account linking is not implemented. Ring's current lifecycle requires an
+account-link flow and registered HTTPS endpoints; the partner-initiated OAuth
+flow is invitation-only, while one-way linking requires the nonce validation,
+user association, secure token storage/refresh, and Ring's app-integration
+confirmation calls. The credentials alone are not sufficient to claim a linked
+account. Before real Ring events can arrive:
+
+1. Confirm the app's allowed account-linking flow, scopes, and staging access in
+   the Ring Developer Portal; add staging tester accounts/devices.
+2. Implement the portal-selected Account Link and Token Exchange endpoints and
+   token lifecycle with durable, encrypted server-side storage.
+3. Deploy to a public HTTPS URL, register exact staging callback/webhook URLs,
+   and verify Ring's test delivery.
+4. Complete Ring's review/certification and configure production separately.
+
+No public webhook endpoint, Ring account link, or real Ring event has been
+verified from this workspace. The existing simulated demo runner remains
+independent and sends `source: "demo"` events.

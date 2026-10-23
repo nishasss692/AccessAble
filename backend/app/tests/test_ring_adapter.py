@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_ring_adapter
+from app.config import settings
 from app.integrations.ring.adapter import RingAdapter
 from app.main import app
 from app.models.acknowledgement import Acknowledgement
@@ -18,14 +19,19 @@ from app.repositories.connection_repository import ConnectionRepository
 class TestRingAdapterUnit:
     """Unit tests for RingAdapter state probing."""
 
-    def test_default_probe_status_is_unknown(self):
+    def test_default_probe_status_is_unknown(self, monkeypatch):
+        monkeypatch.setattr(settings, "ring_client_id", "")
+        monkeypatch.setattr(settings, "ring_client_secret", "")
+        monkeypatch.setattr(settings, "ring_hmac_signing_key", "")
         adapter = RingAdapter()
         probed = adapter.probe_status()
 
         assert probed["status"] == "unknown"
         assert probed["is_connected"] is False
         assert probed["error_message"] is None
-        assert probed["details"]["mode"] == "unconfigured"
+        assert probed["details"]["mode"] == "webhook"
+        assert probed["details"]["webhook_signature_configured"] is False
+        assert probed["details"]["account_link_verified"] is False
         assert "password" not in str(probed)
         assert "token" not in str(probed)
 
@@ -60,7 +66,8 @@ class TestRingStatusAPI:
         assert data["status"] == "unknown"
         assert data["is_connected"] is False
         assert data["error_message"] is None
-        assert "mode" in data["details"]
+        assert data["details"]["mode"] == "webhook"
+        assert data["details"]["account_link_verified"] is False
         assert "last_checked_at" in data
 
     def test_ring_status_persistence(
