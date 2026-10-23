@@ -1,13 +1,24 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
 from app.config import settings
+from app.db.init_db import init_db
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Ensure all tables are created idempotently on startup
+    init_db()
+    yield
+
 
 app = FastAPI(
     title=settings.app_name,
     description="Accessible event history and acknowledgement API",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 cors_origins_list = [

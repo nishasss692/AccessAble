@@ -4,7 +4,7 @@ services:
     runtime: python
     rootDir: backend
     buildCommand: pip install -r requirements.txt && python init_db.py
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    startCommand: python init_db.py && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/v1/health
     envVars:
       - key: PYTHON_VERSION
