@@ -1,0 +1,24 @@
+name: Keep Backend Alive
+
+on:
+  schedule:
+    # Run every 10 minutes to prevent Render free tier from sleeping (sleep threshold is 15 mins)
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+
+jobs:
+  ping-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Backend Health Endpoint
+        env:
+          BACKEND_URL: ${{ secrets.RENDER_BACKEND_URL || vars.RENDER_BACKEND_URL || 'https://accessable-backend.onrender.com' }}
+        run: |
+          echo "Pinging backend at: ${BACKEND_URL}/api/v1/health"
+          RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -m 30 "${BACKEND_URL}/api/v1/health" || true)
+          echo "Response: ${RESPONSE}"
+          if echo "${RESPONSE}" | grep -q "HTTP_STATUS:200"; then
+            echo "✅ Backend is awake and healthy!"
+          else
+            echo "⚠️ Backend ping received non-200 status or timed out. If Render was sleeping, it is waking up now."
+          fi
