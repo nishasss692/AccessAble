@@ -1,5 +1,8 @@
 """Pytest fixtures and isolated test database setup."""
 
+import os
+os.environ.setdefault("DISABLE_SQLALCHEMY_CEXT", "1")
+
 from typing import Generator
 import pytest
 from sqlalchemy import create_engine
